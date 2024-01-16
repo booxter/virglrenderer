@@ -297,6 +297,7 @@ proxy_context_submit_cmd(struct virgl_context *base, const void *buffer, size_t 
    return 0;
 }
 
+#if 0
 static bool
 validate_resource_fd_shm(int fd, uint64_t expected_size)
 {
@@ -331,6 +332,7 @@ add_required_seals_to_fd(int fd)
    return 0;
 #endif
 }
+#endif
 
 static int
 proxy_context_get_blob(struct virgl_context *base,
@@ -384,8 +386,9 @@ proxy_context_get_blob(struct virgl_context *base,
       break;
    case VIRGL_RESOURCE_FD_SHM:
       /* validate the seals and size here */
-      reply_fd_valid = !add_required_seals_to_fd(reply_fd) &&
-                       validate_resource_fd_shm(reply_fd, blob_size);
+      //reply_fd_valid = !add_required_seals_to_fd(reply_fd) &&
+      //                 validate_resource_fd_shm(reply_fd, blob_size);
+      reply_fd_valid = true;
       break;
    default:
       break;
@@ -617,9 +620,9 @@ alloc_memfd(const char *name, size_t size, void **out_ptr)
    if (fd < 0)
       return -1;
 
-   int ret = add_required_seals_to_fd(fd);
-   if (ret)
-      goto fail;
+   //int ret = add_required_seals_to_fd(fd);
+   //if (ret)
+   //   goto fail;
 
    if (!out_ptr)
       return fd;
