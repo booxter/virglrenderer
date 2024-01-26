@@ -197,7 +197,7 @@ vkr_dispatch_vkCreateRingMESA(struct vn_dispatch_context *dispatch,
       return;
    }
 
-   fprintf(stderr, "%s: entry\n", __func__);
+   //fprintf(stderr, "%s: entry\n", __func__);
 
    const struct vkr_resource *res = vkr_context_get_resource(ctx, info->resourceId);
    if (!res || res->fd_type != VIRGL_RESOURCE_FD_SHM) {

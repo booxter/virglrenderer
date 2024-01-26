@@ -187,10 +187,33 @@ static inline void
 vkr_context_free_resource(struct hash_entry *entry)
 {
    struct vkr_resource *res = entry->data;
-   if (res->fd_type == VIRGL_RESOURCE_FD_SHM)
-      munmap(res->u.data, res->size);
-   else if (res->u.fd >= 0)
-      close(res->u.fd);
+   if (res->fd_type == VIRGL_RESOURCE_FD_SHM) {
+      //fprintf(stderr, "%s: unmap shm\n", __func__);
+      munmap((void *)res->u.data, res->size);
+   } else {
+      //fprintf(stderr, "%s: CAN'T call vkUnmapMemory\n", __func__);
+   }
+
+   free(res);
+}
+
+static inline void
+vkr_context_free_resource_internal(struct vkr_context *ctx, struct hash_entry *entry)
+{
+   struct vkr_resource *res = entry->data;
+   if (res->fd_type == VIRGL_RESOURCE_FD_SHM) {
+      //fprintf(stderr, "%s: unmap shm\n", __func__);
+      munmap((void *)res->u.data, res->size);
+   } else {
+      /*
+      struct vkr_device_memory *mem = vkr_context_get_object(ctx, res->blob_id);
+      if (!mem || mem->base.type != VK_OBJECT_TYPE_DEVICE_MEMORY)
+         return;
+      //fprintf(stderr, "%s: calling vkUnmapMemory on: m=%p dm=%p res_id=%d blob_id=%d\n", __func__, (void *)mem, (void *)mem->base.handle.device_memory, res->res_id, res->blob_id);
+      vkUnmapMemory(mem->device->base.handle.device, mem->base.handle.device_memory);
+      */
+   }
+
    free(res);
 }
 
@@ -212,7 +235,7 @@ vkr_context_remove_resource(struct vkr_context *ctx, uint32_t res_id)
    mtx_lock(&ctx->resource_mutex);
    struct hash_entry *entry = _mesa_hash_table_search(ctx->resource_table, &res_id);
    if (likely(entry)) {
-      vkr_context_free_resource(entry);
+      vkr_context_free_resource_internal(ctx, entry);
       _mesa_hash_table_remove(ctx->resource_table, entry);
    }
    mtx_unlock(&ctx->resource_mutex);
@@ -221,6 +244,7 @@ vkr_context_remove_resource(struct vkr_context *ctx, uint32_t res_id)
 static bool
 vkr_context_import_resource_internal(struct vkr_context *ctx,
                                      uint32_t res_id,
+                                     uint64_t blob_id,
                                      uint64_t blob_size,
                                      enum virgl_resource_fd_type fd_type,
                                      int fd,
@@ -233,6 +257,7 @@ vkr_context_import_resource_internal(struct vkr_context *ctx,
       return false;
 
    res->res_id = res_id;
+   res->blob_id = blob_id;
    res->fd_type = fd_type;
    res->size = blob_size;
 
@@ -280,32 +305,31 @@ vkr_context_create_resource_from_shm(struct vkr_context *ctx,
 {
    assert(!vkr_context_get_resource(ctx, res_id));
 
-   fprintf(stderr, "%s: entry: id=%d size=%lld\n", __func__, res_id, blob_size);
+   //fprintf(stderr, "%s: entry: id=%d size=%lld\n", __func__, res_id, blob_size);
 
+   /*
    int fd = os_create_anonymous_file(blob_size, "vkr-shmem");
    if (fd < 0)
       return false;
+   */
 
-   void *mmap_ptr = mmap(NULL, blob_size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0);
+   void *mmap_ptr = mmap(NULL, blob_size, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
    if (mmap_ptr == MAP_FAILED) {
-      close(fd);
+      //close(fd);
       return false;
    }
 
-   char *buf = (char *) mmap_ptr;
-   buf[0x69] = 'A';
-
-   if (!vkr_context_import_resource_internal(ctx, res_id, blob_size,
+   if (!vkr_context_import_resource_internal(ctx, res_id, 0, blob_size,
                                              VIRGL_RESOURCE_FD_SHM, -1, mmap_ptr)) {
       munmap(mmap_ptr, blob_size);
-      close(fd);
+      //close(fd);
       return false;
    }
 
    *out_blob = (struct virgl_context_blob){
-      .type = VIRGL_RESOURCE_FD_SHM,
-      .u.fd = fd,
+      .type = VIRGL_RESOURCE_OPAQUE_HANDLE,
       .map_info = VIRGL_RENDERER_MAP_CACHE_CACHED,
+      .map_ptr = (uint64_t) mmap_ptr,
    };
 
    return true;
@@ -321,7 +345,7 @@ vkr_context_create_resource_from_device_memory(struct vkr_context *ctx,
 {
    assert(!vkr_context_get_resource(ctx, res_id));
 
-   fprintf(stderr, "%s: entry: id=%d size=%lld\n", __func__, res_id, blob_size);
+   //fprintf(stderr, "%s: entry: id=%d size=%lld\n", __func__, res_id, blob_size);
 
    struct vkr_device_memory *mem = vkr_context_get_object(ctx, blob_id);
    if (!mem || mem->base.type != VK_OBJECT_TYPE_DEVICE_MEMORY)
@@ -336,6 +360,7 @@ vkr_context_create_resource_from_device_memory(struct vkr_context *ctx,
     * - vkGetMemoryFdPropertiesKHR for dma_buf fd properties query
     */
    int res_fd = -1;
+   /*
    if (blob_flags & VIRGL_RENDERER_BLOB_FLAG_USE_CROSS_DEVICE) {
       res_fd = os_dupfd_cloexec(blob.u.fd);
       if (res_fd < 0) {
@@ -343,16 +368,17 @@ vkr_context_create_resource_from_device_memory(struct vkr_context *ctx,
          return false;
       }
    }
+   */
 
-   if (!vkr_context_import_resource_internal(ctx, res_id, blob_size, blob.type, res_fd,
+   if (!vkr_context_import_resource_internal(ctx, res_id, blob_id, blob_size, blob.type, res_fd,
                                              NULL)) {
-      if (res_fd >= 0)
-         close(res_fd);
-      close(blob.u.fd);
+      //if (res_fd >= 0)
+      //   close(res_fd);
+      //close(blob.u.fd);
       return false;
    }
 
-   fprintf(stderr, "%s: map_ptr=0x%llx\n", __func__, blob.map_ptr);
+   //fprintf(stderr, "%s: res_id=%d, blob_id=%llu, map_ptr=0x%llx\n", __func__, res_id, blob_id, blob.map_ptr);
 
    *out_blob = blob;
 
@@ -372,7 +398,7 @@ vkr_context_create_resource(struct vkr_context *ctx,
 {
    uint64_t rounded_size = round_up(blob_size, 16384);
    if (rounded_size != blob_size) {
-      fprintf(stderr, "%s: rounded %llu to %llu", __func__, blob_size, rounded_size);
+      //fprintf(stderr, "%s: rounded %llu to %llu", __func__, blob_size, rounded_size);
    }
    /* blob_id == 0 does not refer to an existing VkDeviceMemory, but implies a shm
     * allocation. It is logically contiguous and it can be exported.
@@ -391,10 +417,9 @@ vkr_context_import_resource(struct vkr_context *ctx,
                             int fd,
                             uint64_t size)
 {
-   if (fd_type == VIRGL_RESOURCE_FD_SHM)
-      return vkr_context_import_resource_from_shm(ctx, res_id, size, fd);
-
-   return vkr_context_import_resource_internal(ctx, res_id, size, fd_type, fd, NULL);
+   //return vkr_context_import_resource_internal(ctx, res_id, size, fd_type, fd, NULL);
+   //fprintf(stderr, "%s: UNIMPLEMENTED\n", __func__);
+   return false;
 }
 
 void

@@ -20,6 +20,7 @@
  */
 struct vkr_resource {
    uint32_t res_id;
+   uint64_t blob_id;
 
    enum virgl_resource_fd_type fd_type;
 
@@ -200,6 +201,8 @@ vkr_context_add_object(struct vkr_context *ctx, struct vkr_object *obj)
 {
    assert(vkr_is_recognized_object_type(obj->type));
    assert(obj->id);
+
+   //fprintf(stderr, "add_object: obj=%p id=%d\n", (void*)obj, obj->id);
 
    mtx_lock(&ctx->object_mutex);
    assert(!_mesa_hash_table_search(ctx->object_table, &obj->id));
