@@ -395,6 +395,12 @@ vkr_dispatch_vkFreeMemory(struct vn_dispatch_context *dispatch,
    if (!mem)
       return;
 
+#ifdef __APPLE__
+   if (mem->exported) {
+      vkUnmapMemory(mem->device->base.handle.device, mem->base.handle.device_memory);
+   }
+#endif
+
    vkr_device_memory_release(mem);
    vkr_device_memory_destroy_and_remove(dispatch->data, args);
 }
@@ -559,8 +565,34 @@ vkr_device_memory_export_blob(struct vkr_device_memory *mem,
       vulkan_info.allocation_size = mem->allocation_size;
       vulkan_info.memory_type_index = mem->memory_type_index;
    } else {
+#ifdef __APPLE__
+      void *ptr;
+      if (vkMapMemory(mem->device->base.handle.device, mem->base.handle.device_memory,
+                      0, mem->allocation_size, 0, &ptr) != VK_SUCCESS) {
+         vkr_log("vkMapMemory failed");
+         return false;
+      }
+
+      fd_type = VIRGL_RESOURCE_OPAQUE_HANDLE;
+      handle_type = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+      vulkan_info.allocation_size = mem->allocation_size;
+      vulkan_info.memory_type_index = mem->memory_type_index;
+
+      mem->exported = true;
+
+      *out_blob = (struct virgl_context_blob){
+         .type = fd_type,
+         .u.fd = -1,
+         .map_ptr = ptr,
+         .map_info = map_info,
+         .vulkan_info = vulkan_info,
+      };
+
+      return true;
+#else
       vkr_log("mem is not exportable");
       return false;
+#endif
    }
 
    int fd;

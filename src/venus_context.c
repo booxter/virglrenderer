@@ -124,7 +124,7 @@ venus_context_get_blob(struct virgl_context *base,
    struct virgl_resource_vulkan_info vulkan_info;
 
    if (!vkr_renderer_create_resource(base->ctx_id, res_id, blob_id, blob_size, blob_flags,
-                                     &fd_type, &res_fd, &map_info, &vulkan_info)) {
+                                     &fd_type, &res_fd, &map_info, &map_ptr, &vulkan_info)) {
       //fprintf(stderr, "can't create res %d with blob %llu\n", res_id, blob_id);
       return -1;
    }
@@ -134,6 +134,7 @@ venus_context_get_blob(struct virgl_context *base,
    blob->type = fd_type;
    blob->u.fd = res_fd;
    blob->map_info = map_info;
+   blob->map_ptr = map_ptr;
    blob->vulkan_info = vulkan_info;
 
    //fprintf(stderr, "%s: fd=0x%llx\n", __func__, map_ptr);

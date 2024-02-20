@@ -47,6 +47,9 @@ struct virgl_context_blob {
    } u;
 
    uint32_t map_info;
+#ifdef __APPLE__
+   uint64_t map_ptr;
+#endif
 
    struct virgl_resource_vulkan_info vulkan_info;
 };

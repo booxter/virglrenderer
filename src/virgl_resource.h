@@ -97,6 +97,9 @@ struct virgl_resource {
    int iov_count;
 
    uint32_t map_info;
+#ifdef __APPLE__
+   uint64_t map_ptr;
+#endif
 
    uint64_t map_size;
    void *mapped;

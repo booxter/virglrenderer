@@ -1220,6 +1220,9 @@ int virgl_renderer_resource_create_blob(const struct virgl_renderer_resource_cre
       res = virgl_resource_create_from_opaque_handle(ctx, args->res_handle, blob.u.opaque_handle);
       if (!res)
          return -ENOMEM;
+#ifdef __APPLE__
+      res->map_ptr = blob.map_ptr;
+#endif
    } else if (blob.type != VIRGL_RESOURCE_FD_INVALID) {
       res = virgl_resource_create_from_fd(args->res_handle,
                                           blob.type,
@@ -1346,6 +1349,19 @@ int virgl_renderer_resource_get_map_info(uint32_t res_handle, uint32_t *map_info
    return 0;
 }
 
+#ifdef __APPLE__
+int virgl_renderer_resource_get_map_ptr(uint32_t res_handle, uint64_t *map_ptr)
+{
+   TRACE_FUNC();
+   struct virgl_resource *res = virgl_resource_lookup(res_handle);
+   if (!res)
+      return -EINVAL;
+
+  *map_ptr = res->map_ptr;
+   return 0;
+}
+#endif
+
 int
 virgl_renderer_resource_export_blob(uint32_t res_id, uint32_t *fd_type, int *fd)
 {
@@ -1365,6 +1381,10 @@ virgl_renderer_resource_export_blob(uint32_t res_id, uint32_t *fd_type, int *fd)
       *fd_type = VIRGL_RENDERER_BLOB_FD_TYPE_SHM;
       break;
    case VIRGL_RESOURCE_OPAQUE_HANDLE:
+#ifdef __APPLE__
+      *fd_type = VIRGL_RENDERER_BLOB_FD_TYPE_APPLE;
+      break;
+#endif
    case VIRGL_RESOURCE_FD_INVALID:
       /* Avoid a default case so that -Wswitch will tell us at compile time if a
        * new virgl resource type is added without being handled here.

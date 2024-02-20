@@ -251,6 +251,35 @@ vkr_context_import_resource_internal(struct vkr_context *ctx,
    return true;
 }
 
+#ifdef __APPLE__
+static bool
+vkr_context_create_resource_from_shm(struct vkr_context *ctx,
+                                     uint32_t res_id,
+                                     uint64_t blob_size,
+                                     struct virgl_context_blob *out_blob)
+{
+   assert(!vkr_context_get_resource(ctx, res_id));
+
+   void *mmap_ptr = mmap(NULL, blob_size, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+   if (mmap_ptr == MAP_FAILED) {
+      return false;
+   }
+
+   if (!vkr_context_import_resource_internal(ctx, res_id, blob_size,
+                                             VIRGL_RESOURCE_FD_SHM, -1, mmap_ptr)) {
+      munmap(mmap_ptr, blob_size);
+      return false;
+   }
+
+   *out_blob = (struct virgl_context_blob){
+      .type = VIRGL_RESOURCE_OPAQUE_HANDLE,
+      .map_ptr = (uint64_t) mmap_ptr,
+      .map_info = VIRGL_RENDERER_MAP_CACHE_CACHED,
+   };
+
+   return true;
+}
+#else
 static bool
 vkr_context_import_resource_from_shm(struct vkr_context *ctx,
                                      uint32_t res_id,
@@ -305,6 +334,7 @@ vkr_context_create_resource_from_shm(struct vkr_context *ctx,
 
    return true;
 }
+#endif
 
 static bool
 vkr_context_create_resource_from_device_memory(struct vkr_context *ctx,
