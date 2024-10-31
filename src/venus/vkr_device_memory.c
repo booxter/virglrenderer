@@ -583,7 +583,7 @@ vkr_device_memory_export_blob(struct vkr_device_memory *mem,
       *out_blob = (struct virgl_context_blob){
          .type = fd_type,
          .u.fd = -1,
-         .map_ptr = ptr,
+         .map_ptr = (uint64_t) ptr,
          .map_info = map_info,
          .vulkan_info = vulkan_info,
       };
