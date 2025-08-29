@@ -459,9 +459,13 @@ venus_renderer_reset(void)
 size_t
 venus_get_capset(uint32_t set, void *caps)
 {
+   /* IHAR: reuse from above; but maybe just zero? */
+   static const uint32_t required_flags =
+      VKR_RENDERER_THREAD_SYNC | VKR_RENDERER_ASYNC_FENCE_CB;
+
    switch (set) {
-   case VIRGL_RENDERER_CAPSET_VENUS:
-      return vkr_get_capset(caps);
+   case VIRTGPU_DRM_CAPSET_VENUS:
+      return vkr_get_capset(caps, required_flags);
    default:
       break;
    }
