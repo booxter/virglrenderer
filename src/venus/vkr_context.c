@@ -280,10 +280,10 @@ vkr_context_create_resource_from_shm(struct vkr_context *ctx,
    return true;
 }
 static bool
-vkr_context_import_resource_from_shm(struct vkr_context *ctx,
-                                     uint32_t res_id,
-                                     uint64_t blob_size,
-                                     int fd)
+vkr_context_import_resource_from_shm(UNUSED struct vkr_context *ctx,
+                                     UNUSED uint32_t res_id,
+                                     UNUSED uint64_t blob_size,
+                                     UNUSED int fd)
 {
    /* IHAR: not sure if this is being used... Leaving empty for now. */
    return true;
