@@ -335,7 +335,7 @@ if with_check_gl_errors
 endif
 
 with_venus = get_option('venus')
-with_render_server = with_venus
+with_render_server = false
 with_render_server_worker = get_option('render-server-worker')
 render_server_install_dir = get_option('prefix') / get_option('libexecdir')
 if with_venus
