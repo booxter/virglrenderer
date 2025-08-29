@@ -364,7 +364,7 @@ if with_venus
       conf_data.set('ENABLE_VENUS_VALIDATE', 1)
    endif
 
-   conf_data.set('ENABLE_RENDER_SERVER', 1)
+   conf_data.set('ENABLE_RENDER_SERVER', 0)
    conf_data.set('RENDER_SERVER_EXEC_PATH',
                  '"' + render_server_install_dir / 'virgl_render_server' + '"')
    if meson.version().version_compare('>= 0.58')
