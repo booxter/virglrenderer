@@ -199,7 +199,7 @@ if with_drm_asahi
    virgl_sources += drm_asahi_sources
 endif
 
-if with_render_server
+if with_venus
    virgl_sources += proxy_sources
 endif
 
