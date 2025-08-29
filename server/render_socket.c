@@ -28,7 +28,11 @@
 bool
 render_socket_pair(int out_fds[static 2])
 {
+#ifdef __APPLE__
+   int ret = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, out_fds);
+#else
    int ret = socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, out_fds);
+#endif
    if (ret) {
       render_log("failed to create socket pair");
       return false;

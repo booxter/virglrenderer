@@ -100,7 +100,11 @@ static bool
 proxy_socket_recvmsg(struct proxy_socket *socket, struct msghdr *msg)
 {
    do {
+#ifdef __APPLE__
+      const ssize_t s = recvmsg(socket->fd, msg, 0);
+#else
       const ssize_t s = recvmsg(socket->fd, msg, MSG_CMSG_CLOEXEC);
+#endif
       if (unlikely(s < 0)) {
          if (errno == EAGAIN || errno == EINTR)
             continue;
