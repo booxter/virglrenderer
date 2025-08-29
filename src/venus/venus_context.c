@@ -2,6 +2,8 @@
 
 #include "util/hash_table.h"
 
+#include "virtgpu_drm.h"
+
 #include "virglrenderer.h"
 #include "virgl_context.h"
 #include "virgl_util.h"
